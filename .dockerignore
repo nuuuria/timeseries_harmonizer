@@ -1,0 +1,8 @@
+venv/
+.env
+config*json
+kubeconfig/
+Dockerfile
+.dockerignore
+.gitignore
+kafka-docker/

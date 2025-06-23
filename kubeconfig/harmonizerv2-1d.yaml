@@ -1,0 +1,157 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: harmonizerv2-1d-starter
+  namespace: harmonizer-icat
+  labels:
+    app: harmonizer
+spec:
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 1
+  suspend: false
+  schedule: "0 0 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 86340
+      backoffLimit: 0
+      template:
+        spec:
+          hostAliases:
+            - ip: "10.0.88.76"
+              hostnames:
+                - "master1.internal"
+            - ip: "10.0.87.95"
+              hostnames:
+                - "master2.internal"
+            - ip: "10.0.88.132"
+              hostnames:
+                - "worker1.internal"
+            - ip: "10.0.86.33"
+              hostnames:
+                - "worker2.internal"
+            - ip: "10.0.87.145"
+              hostnames:
+                - "worker3.internal"
+            - ip: "10.0.86.214"
+              hostnames:
+                - "worker4.internal"
+            - ip: "10.0.129.220"
+              hostnames:
+                - "kafka1.internal"
+            - ip: "10.0.88.152"
+              hostnames:
+                - "druid-1.internal"
+            - ip: "10.0.88.175"
+              hostnames:
+                - "database1-vpn"
+            - ip: "10.0.88.151"
+              hostnames:
+                - "database2-vpn"
+            - ip: "10.0.87.50"
+              hostnames:
+                - "database3-vpn"
+          imagePullSecrets:
+          - name: odin1pullsecret
+          containers:
+          - name:  harmonizer
+            image: 1l41bgc7.c1.gra9.container-registry.ovh.net/infraestructures/harmonizer:prod
+            command: [ "python3", "launcher_v2.py", "-l", "start", "-f", "P1D",  "-n", "4",
+                       "-t", "icat.influx" ]
+            env:
+              - name: CONF_FILE
+                value: "config.json"
+            volumeMounts:
+              - name: configv2
+                mountPath: /harmonizer/config.json
+                subPath: config.json
+          volumes:
+            - name: configv2
+              secret:
+                secretName: configv2
+                items:
+                  - key: config.json
+                    path: config.json
+          restartPolicy: Never
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: harmonizerv2-1d-consumer
+  namespace: harmonizer-icat
+  labels:
+    app: harmonizer
+spec:
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 1
+  suspend: false
+  schedule: "1 0 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 86340
+      completions: 4
+      parallelism: 4
+      completionMode: Indexed
+      backoffLimit: 0
+      template:
+        spec:
+          hostAliases:
+            - ip: "10.0.88.76"
+              hostnames:
+                - "master1.internal"
+            - ip: "10.0.87.95"
+              hostnames:
+                - "master2.internal"
+            - ip: "10.0.88.132"
+              hostnames:
+                - "worker1.internal"
+            - ip: "10.0.86.33"
+              hostnames:
+                - "worker2.internal"
+            - ip: "10.0.87.145"
+              hostnames:
+                - "worker3.internal"
+            - ip: "10.0.86.214"
+              hostnames:
+                - "worker4.internal"
+            - ip: "10.0.129.220"
+              hostnames:
+                - "kafka1.internal"
+            - ip: "10.0.88.152"
+              hostnames:
+                - "druid-1.internal"
+            - ip: "10.0.88.175"
+              hostnames:
+                - "database1-vpn"
+            - ip: "10.0.88.151"
+              hostnames:
+                - "database2-vpn"
+            - ip: "10.0.87.50"
+              hostnames:
+                - "database3-vpn"
+          imagePullSecrets:
+          - name: odin1pullsecret
+          containers:
+          - name:  harmonizer
+            image: 1l41bgc7.c1.gra9.container-registry.ovh.net/infraestructures/harmonizer:prod
+            command: [ "python3", "launcher_v2.py", "-l", "processor", "-f", "P1D",  "-n", "4",
+                       "-t", "icat.influx" ]
+            env:
+              - name: CONF_FILE
+                value: "config.json"
+            volumeMounts:
+              - name: configv2
+                mountPath: /harmonizer/config.json
+                subPath: config.json
+          volumes:
+            - name: configv2
+              secret:
+                secretName: configv2
+                items:
+                  - key: config.json
+                    path: config.json
+          restartPolicy: Never
+# kubectl create secret generic configv2 --from-file=config.json=config_infraestructures_prodv2.json -n harmonizer-icat
+
+

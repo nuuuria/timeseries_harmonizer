@@ -1,0 +1,73 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: harmonizer
+  namespace: harmonizer-icat
+  labels:
+    app: harmonizer
+spec:
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  suspend: false
+  schedule: "*/15 * * * *"
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          hostAliases:
+            - ip: "10.0.88.76"
+              hostnames:
+                - "master1.internal"
+            - ip: "10.0.87.95"
+              hostnames:
+                - "master2.internal"
+            - ip: "10.0.88.132"
+              hostnames:
+                - "worker1.internal"
+            - ip: "10.0.86.33"
+              hostnames:
+                - "worker2.internal"
+            - ip: "10.0.87.145"
+              hostnames:
+                - "worker3.internal"
+            - ip: "10.0.86.214"
+              hostnames:
+                - "worker4.internal"
+            - ip: "10.0.129.220"
+              hostnames:
+                - "kafka1.internal"
+            - ip: "10.0.88.152"
+              hostnames:
+                - "druid-1.internal"
+            - ip: "10.0.88.175"
+              hostnames:
+                - "database1-vpn"
+            - ip: "10.0.88.151"
+              hostnames:
+                - "database2-vpn"
+            - ip: "10.0.87.50"
+              hostnames:
+                - "database3-vpn"
+          imagePullSecrets:
+          - name: registrypullsecret
+          containers:
+          - name:  harmonizer
+            image: docker.tech.beegroup-cimne.com/infraestructures/harmonizer_dexma_modbus
+            command: ["python3","launcher.py","-t","devices"]
+            env:
+              - name: CONF_FILE
+                value: "config.json"
+            volumeMounts:
+              - name: config
+                mountPath: /harmonizer/config.json
+                subPath: config.json
+          volumes:
+            - name: config
+              secret:
+                secretName: config
+                items:
+                  - key: config.json
+                    path: config.json
+          restartPolicy: Never
+
